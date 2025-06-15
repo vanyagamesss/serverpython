@@ -1,9 +1,9 @@
 import os, shutil, sqlite3, zipfile, socket, json
-from flask import Flask, request, send_from_directory, render_template_string, abort, redirect, url_for
+from flask import Flask, request, send_from_directory, render_template_string, abort, redirect
 from flask_cors import CORS
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
-    QComboBox, QLineEdit, QListWidget, QFileDialog, QTextBrowser, QHBoxLayout
+    QComboBox, QLineEdit, QListWidget, QTextBrowser, QHBoxLayout
 )
 from multiprocessing import Process
 from werkzeug.utils import secure_filename
@@ -30,7 +30,7 @@ def init_db():
         ''')
 init_db()
 
-# === Утилита для определения IP ===
+# === Получение локального IP ===
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -53,7 +53,7 @@ def load_server_list():
             return json.load(f)
     return []
 
-# === Flask-сервер (функция для процесса) ===
+# === Flask-сервер (в процессе) ===
 def run_flask(name, mode, max_gb, host, port):
     app = Flask(name)
     CORS(app)
@@ -116,8 +116,6 @@ def run_flask(name, mode, max_gb, host, port):
                 <ul>{% for f in files %}<li><a href="/files/{{f}}">{{f}}</a></li>{% endfor %}</ul>
                 </body></html>
             """, name=name, files=files)
-        elif mode == "neuro":
-            return "<h2>Нейросеть: Введите сообщение</h2><form method='POST' action='/chat'><input name='msg'><input type='submit'></form>"
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
@@ -162,11 +160,6 @@ def run_flask(name, mode, max_gb, host, port):
     def files(f):
         return send_from_directory(storage, f)
 
-    @app.route("/chat", methods=["POST"])
-    def chat():
-        msg = request.form.get("msg", "")
-        return f"<p>ИИ получил: {msg}</p><a href='/'>Назад</a>"
-
     @app.route("/site-manager")
     def site_manager():
         files = os.listdir(site)
@@ -199,6 +192,7 @@ def run_flask(name, mode, max_gb, host, port):
 
     app.run(host=host, port=port, use_reloader=False)
 
+# === GUI ===
 class GUI(QWidget):
     def __init__(self):
         super().__init__()
@@ -209,7 +203,7 @@ class GUI(QWidget):
         self.layout.addWidget(self.server_list)
 
         self.name_input = QLineEdit(); self.name_input.setPlaceholderText("Название сервера")
-        self.mode_box = QComboBox(); self.mode_box.addItems(["site", "storage", "neuro"])
+        self.mode_box = QComboBox(); self.mode_box.addItems(["site", "storage"])
         self.port_input = QLineEdit(); self.port_input.setPlaceholderText("Порт")
         self.max_gb_input = QLineEdit(); self.max_gb_input.setPlaceholderText("Макс. ГБ")
         self.layout.addWidget(self.name_input)
