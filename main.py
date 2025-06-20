@@ -227,6 +227,7 @@ class GUI(QWidget):
 
         self.processes = {}
         self.servers = load_server_list()
+        self.start_all_servers()  # <-- автозапуск
         self.update_list()
 
         self.start_btn.clicked.connect(self.create_server)
@@ -238,6 +239,18 @@ class GUI(QWidget):
         self.server_list.clear()
         for s in self.servers:
             self.server_list.addItem(f"{s['name']} [{s['mode']}] http://{s['host']}:{s['port']}")
+
+    def start_all_servers(self):
+        for s in self.servers:
+            name = s["name"]
+            mode = s["mode"]
+            port = s["port"]
+            max_gb = s.get("max_gb", 1.0)
+            host = s.get("host", get_local_ip())
+            p = Process(target=run_flask, args=(name, mode, max_gb, host, port))
+            p.start()
+            self.processes[name] = p
+            self.output.append(f"✅ Сервер {name} запущен на http://{host}:{port}")
 
     def create_server(self):
         name = self.name_input.text().strip()
@@ -251,7 +264,7 @@ class GUI(QWidget):
                 self.output.append(f"❌ Сервер '{name}' уже существует.")
                 return
 
-        self.servers.append({"name": name, "mode": mode, "port": port, "host": host})
+        self.servers.append({"name": name, "mode": mode, "port": port, "host": host, "max_gb": max_gb})
         save_server_list(self.servers)
         p = Process(target=run_flask, args=(name, mode, max_gb, host, port))
         p.start()
